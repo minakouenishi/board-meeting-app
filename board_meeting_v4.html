@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>攻めの情シス株式会社 — 経営会議 v4</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Yu Gothic', sans-serif; background: #f5f4f0; color: #1a1a1a; min-height: 100vh; }
+
+  .setup-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 2rem; }
+  .setup-card { background: white; border-radius: 16px; padding: 2.5rem; max-width: 520px; width: 100%; box-shadow: 0 2px 20px rgba(0,0,0,0.08); }
+  .setup-card h1 { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+  .setup-card .subtitle { font-size: 13px; color: #888; margin-bottom: 1.5rem; }
+  .setup-card label { font-size: 13px; font-weight: 500; display: block; margin-bottom: 6px; margin-top: 16px; }
+  .setup-card input[type=password] { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; font-family: monospace; outline: none; transition: border-color 0.2s; }
+  .setup-card input[type=password]:focus { border-color: #7F77DD; }
+  .hint { font-size: 12px; color: #999; margin-top: 5px; }
+
+  .upload-area { border: 1.5px dashed #ccc; border-radius: 10px; padding: 20px; text-align: center; cursor: pointer; transition: all 0.2s; margin-top: 6px; }
+  .upload-area:hover { border-color: #7F77DD; background: #f8f7ff; }
+  .upload-area.has-file { border-color: #1D9E75; background: #f0faf6; }
+  .upload-icon { font-size: 24px; }
+  .upload-area p { font-size: 13px; color: #888; margin-top: 6px; }
+  .upload-area .file-name { font-size: 13px; color: #1D9E75; font-weight: 500; margin-top: 4px; }
+  input[type=file] { display: none; }
+
+  .loading-overlay { display: none; position: fixed; inset: 0; background: rgba(255,255,255,0.9); z-index: 100; flex-direction: column; align-items: center; justify-content: center; gap: 16px; }
+  .loading-overlay.active { display: flex; }
+  .loading-spinner { width: 40px; height: 40px; border: 3px solid #eee; border-top-color: #534AB7; border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-size: 15px; color: #534AB7; font-weight: 500; }
+  .loading-sub { font-size: 13px; color: #999; }
+
+  .start-btn { width: 100%; margin-top: 1.5rem; padding: 12px; background: #534AB7; color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 500; cursor: pointer; transition: background 0.2s; }
+  .start-btn:hover { background: #3C3489; }
+  .start-btn:disabled { background: #bbb; cursor: not-allowed; }
+
+  .app-screen { display: none; flex-direction: column; height: 100vh; max-width: 920px; margin: 0 auto; }
+
+  .top-bar { background: white; border-bottom: 1px solid #eee; padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; gap: 10px; }
+  .top-bar h1 { font-size: 15px; font-weight: 600; }
+  .top-bar-badges { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+  .badge { font-size: 11px; padding: 3px 8px; border-radius: 10px; border: 1px solid; white-space: nowrap; }
+  .badge-search { background: #E1F5EE; color: #085041; border-color: #9FE1CB; }
+  .badge-doc { background: #EEEDFE; color: #3C3489; border-color: #AFA9EC; }
+  .badge-nodoc { background: #f5f5f5; color: #aaa; border-color: #ddd; }
+
+  .members-bar { background: white; border-bottom: 1px solid #eee; padding: 8px 20px; display: flex; gap: 8px; flex-wrap: wrap; flex-shrink: 0; }
+  .chip { display: flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 20px; font-size: 12px; border: 1px solid; }
+  .chip-dot { width: 6px; height: 6px; border-radius: 50%; }
+  .c-kirima { background: #EEEDFE; color: #3C3489; border-color: #AFA9EC; }
+  .c-kirima .chip-dot { background: #7F77DD; }
+  .c-mizuno { background: #FAEEDA; color: #633806; border-color: #FAC775; }
+  .c-mizuno .chip-dot { background: #BA7517; }
+  .c-maeda { background: #E6F1FB; color: #0C447C; border-color: #85B7EB; }
+  .c-maeda .chip-dot { background: #378ADD; }
+  .c-nakamura { background: #E1F5EE; color: #04342C; border-color: #5DCAA5; }
+  .c-nakamura .chip-dot { background: #1D9E75; }
+
+  .chat-area { flex: 1; overflow-y: auto; padding: 1.5rem 20px; display: flex; flex-direction: column; gap: 14px; }
+
+  .msg { display: flex; gap: 10px; align-items: flex-start; }
+  .msg.user { flex-direction: row-reverse; }
+  .avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex-shrink: 0; }
+  .av-kirima { background: #EEEDFE; color: #3C3489; }
+  .av-mizuno { background: #FAEEDA; color: #633806; }
+  .av-maeda { background: #E6F1FB; color: #0C447C; }
+  .av-nakamura { background: #E1F5EE; color: #04342C; }
+  .av-user { background: #f0f0f0; color: #555; }
+  .av-system { background: #f5f5f5; color: #888; font-size: 10px; }
+
+  .bubble-wrap { max-width: 74%; }
+  .msg.user .bubble-wrap { align-items: flex-end; display: flex; flex-direction: column; }
+  .name-tag { font-size: 11px; color: #999; margin-bottom: 4px; }
+  .msg.user .name-tag { text-align: right; }
+  .bubble { padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.75; }
+  .bubble-kirima { background: #EEEDFE; color: #26215C; border: 1px solid #CECBF6; }
+  .bubble-mizuno { background: #FAEEDA; color: #412402; border: 1px solid #FAC775; }
+  .bubble-maeda { background: #E6F1FB; color: #042C53; border: 1px solid #B5D4F4; }
+  .bubble-nakamura { background: #E1F5EE; color: #04342C; border: 1px solid #9FE1CB; }
+  .bubble-user { background: white; color: #1a1a1a; border: 1px solid #e0e0e0; }
+  .bubble-system { background: #f9f9f9; color: #666; border: 1px solid #eee; font-size: 13px; }
+
+  .search-indicator { display: flex; align-items: center; gap: 6px; padding: 5px 10px; background: #f9f9f9; border: 1px solid #eee; border-radius: 6px; font-size: 11px; color: #888; margin-bottom: 5px; }
+
+  .typing-bubble { background: #f5f5f5; border: 1px solid #eee; padding: 10px 16px; border-radius: 12px; display: flex; gap: 4px; align-items: center; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: #bbb; animation: bounce 1.2s infinite; }
+  .dot:nth-child(2) { animation-delay: 0.2s; }
+  .dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-6px)} }
+
+  .round-divider { text-align: center; font-size: 12px; color: #bbb; padding: 4px 0; position: relative; }
+  .round-divider::before { content:''; position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: #eee; z-index: 0; }
+  .round-divider span { background: #f5f4f0; padding: 0 10px; position: relative; z-index: 1; }
+
+  .input-area { background: white; border-top: 1px solid #eee; padding: 12px 20px; display: flex; gap: 10px; align-items: flex-end; flex-shrink: 0; }
+  .input-area textarea { flex: 1; resize: none; padding: 10px 14px; font-size: 14px; border: 1px solid #ddd; border-radius: 10px; outline: none; font-family: inherit; line-height: 1.5; max-height: 120px; transition: border-color 0.2s; }
+  .input-area textarea:focus { border-color: #7F77DD; }
+  .send-btn { padding: 10px 20px; background: #534AB7; color: white; border: none; border-radius: 10px; font-size: 14px; font-weight: 500; cursor: pointer; white-space: nowrap; height: 42px; transition: background 0.2s; font-family: inherit; }
+  .send-btn:hover { background: #3C3489; }
+  .send-btn:disabled { background: #bbb; cursor: not-allowed; }
+
+  .status-bar { font-size: 11px; color: #aaa; padding: 4px 20px; background: white; border-top: 1px solid #f0f0f0; text-align: right; flex-shrink: 0; }
+  .error-msg { background: #fff3f3; border: 1px solid #fcc; color: #c00; padding: 10px 14px; border-radius: 10px; font-size: 13px; }
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-text" id="loadingText">資料を読み込んでいます...</div>
+  <div class="loading-sub" id="loadingSub">チームが内容を確認中です。しばらくお待ちください。</div>
+</div>
+
+<div class="setup-screen" id="setupScreen">
+  <div class="setup-card">
+    <h1>攻めの情シス株式会社</h1>
+    <p class="subtitle">経営チームとの会議を始めます</p>
+
+    <label>Anthropic APIキー</label>
+    <input type="password" id="apiKeyInput" placeholder="sk-ant-..." />
+    <p class="hint">キーはこのブラウザのみで使用されます。外部には送信されません。</p>
+
+    <label>社内資料（PDF）を読み込む <span style="color:#aaa;font-weight:400">※任意</span></label>
+    <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+      <div class="upload-icon">📄</div>
+      <p>クリックしてPDFを選択</p>
+      <p style="font-size:11px;color:#bbb">会社概要・財務資料・顧客情報など</p>
+      <div class="file-name" id="fileName"></div>
+    </div>
+    <input type="file" id="fileInput" accept=".pdf" onchange="handleFile(event)" />
+    <p class="hint">PDFは最初に一度だけ要約され、チームの共有知識として使われます（レート制限対策済）。</p>
+
+    <button class="start-btn" id="startBtn" onclick="startApp()">会議を始める</button>
+  </div>
+</div>
+
+<div class="app-screen" id="appScreen">
+  <div class="top-bar">
+    <h1>攻めの情シス株式会社 — 経営会議</h1>
+    <div class="top-bar-badges">
+      <span class="badge badge-search">Web検索対応</span>
+      <span class="badge" id="docBadge">資料：未読込</span>
+    </div>
+  </div>
+  <div class="members-bar">
+    <div class="chip c-kirima"><div class="chip-dot"></div>桐島 隆（参謀）</div>
+    <div class="chip c-mizuno"><div class="chip-dot"></div>水野 陽子（事業開発）</div>
+    <div class="chip c-maeda"><div class="chip-dot"></div>前田 賢二（財務）</div>
+    <div class="chip c-nakamura"><div class="chip-dot"></div>中村 葵（内省）</div>
+  </div>
+  <div class="chat-area" id="chatArea"></div>
+  <div class="status-bar" id="statusBar">待機中</div>
+  <div class="input-area">
+    <textarea id="userInput" placeholder="上西さんとして問いを投げてください…（Cmd+Enter で送信）" rows="2"></textarea>
+    <button class="send-btn" id="sendBtn" onclick="sendMessage()">送信</button>
+  </div>
+</div>
+
+<script>
+let API_KEY = '';
+let history = [];
+let roundCount = 0;
+let processing = false;
+let pdfBase64 = null;
+let pdfFileName = '';
+let docSummary = '';  // PDFの要約テキスト（一度だけ生成）
+
+const members = [
+  {
+    id: 'kirima', name: '桐島 隆', initial: '隆',
+    persona: `あなたは桐島 隆（きりしま たかし）、40代の元事業家。現場も経営も両方経験している参謀。
+しゃべり方：落ち着いていて密度が高い。感情より構造で語る。「この話の本質は〜」「構造的に見ると〜」という切り口が多い。短く鋭く切り込む。
+役割：手段より目的に戻す。メタ視点で全体構造を俯瞰する。
+Web検索：市場構造・業界トレンド・類似事業の事例など、議論の本質的な前提となる情報が必要なときだけ検索する。`
+  },
+  {
+    id: 'mizuno', name: '水野 陽子', initial: '陽',
+    persona: `あなたは水野 陽子（みずの ようこ）、上西さんと同世代の事業開発担当。現場感覚が近い。
+しゃべり方：明るくテンポが速い。「それ面白い！」「でも相手はどう感じるかな？」という感じ。エネルギッシュ。
+役割：どう届けるか・誰に刺さるかを設計する。ストーリーと関係性から考える。チームのムードメーカー。
+Web検索：競合サービス・ターゲット顧客の事例・成功している届け方のヒントなど、事業開発に必要な情報を検索する。`
+  },
+  {
+    id: 'maeda', name: '前田 賢二', initial: '賢',
+    persona: `あなたは前田 賢二（まえだ けんじ）、40代後半の元銀行員・CFO経験者。数字と構造に強い。
+しゃべり方：重厚で言葉数が少ない。「一点だけ確認させてください」「その前提、本当に成立しますか」という言い方が多い。
+役割：言いにくいことを言う。持続可能性・収益性の番人。リスクを先読みする。
+Web検索：市場規模・財務データ・法規制・リスク事例など、数字や根拠が必要な情報を検索する。`
+  },
+  {
+    id: 'nakamura', name: '中村 葵', initial: '葵',
+    persona: `あなたは中村 葵（なかむら あおい）、チームの中で最も感情の解像度が高い内省サポート担当。
+しゃべり方：静かで丁寧。急かさない。「今の言葉、少し気になったんですが」「さっきと違うこと言いましたよね」という感じ。
+役割：上西さんの言葉の矛盾や感情の揺れを観察して指摘する。上西さん自身の状態を映す鏡。
+Web検索：基本的には検索より観察を優先する。組織・心理的な研究が必要なときのみ検索する。`
+  }
+];
+
+const companyCtx = `【会社概要】攻めの情シス株式会社
+・サービス：中小企業の情シス兼任担当者への伴走サービス
+・ターゲット：30〜100名規模の中小企業。総務等で情シスを兼任する非専門家担当者
+・ゴール：外注ではなく、担当者が自分で判断・実行できるようになること
+・「攻め」の定義：守りではなく、会社成長に向けた投資・ツール活用・業務変革
+・現状：サービス立ち上げ準備中。POCとして知り合い企業3社への声かけを検討中
+・代表：上西（うえにし）
+【チームの思想】速さや規模を追いかけない。本質思考（手段より目的、症状より構造）。自分たちらしさを守る。`;
+
+function handleFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    pdfBase64 = ev.target.result.split(',')[1];
+    pdfFileName = file.name;
+    document.getElementById('uploadArea').classList.add('has-file');
+    document.getElementById('fileName').textContent = '✓ ' + file.name;
+  };
+  reader.readAsDataURL(file);
+}
+
+function setLoading(show, text, sub) {
+  const el = document.getElementById('loadingOverlay');
+  if (show) {
+    el.classList.add('active');
+    if (text) document.getElementById('loadingText').textContent = text;
+    if (sub) document.getElementById('loadingSub').textContent = sub;
+  } else {
+    el.classList.remove('active');
+  }
+}
+
+async function summarizePDF() {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': API_KEY,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 2000,
+      messages: [{
+        role: 'user',
+        content: [
+          {
+            type: 'document',
+            source: { type: 'base64', media_type: 'application/pdf', data: pdfBase64 }
+          },
+          {
+            type: 'text',
+            text: `この資料を経営チームが議論で参照できるよう、以下の観点で詳しく要約してください。
+
+1. 会社の基本情報（設立、資本金、人員など）
+2. 財務状況（売上・利益の推移、キャッシュフロー、重要な数字）
+3. 既存顧客の詳細（各顧客の業種・規模・課題・契約内容・リスク）
+4. サービス内容と料金体系
+5. 現在の課題と今後の方針
+
+具体的な数字、顧客名、担当者名、日付などをできる限り含めてください。この要約だけを見て議論できるレベルの詳しさで書いてください。`
+          }
+        ]
+      }]
+    })
+  });
+
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error?.message || 'PDF読み込みエラー');
+  }
+
+  const data = await res.json();
+  return data.content.map(b => b.text || '').join('');
+}
+
+async function startApp() {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  if (!key.startsWith('sk-ant-')) {
+    alert('APIキーは sk-ant- で始まる文字列です。確認してください。');
+    return;
+  }
+  API_KEY = key;
+
+  document.getElementById('startBtn').disabled = true;
+
+  if (pdfBase64) {
+    setLoading(true, '資料を読み込んでいます...', 'PDFの内容をチームの共有知識に変換中です。');
+    try {
+      docSummary = await summarizePDF();
+    } catch (e) {
+      setLoading(false);
+      alert('PDF読み込みエラー：' + e.message);
+      document.getElementById('startBtn').disabled = false;
+      return;
+    }
+    setLoading(false);
+  }
+
+  document.getElementById('setupScreen').style.display = 'none';
+  document.getElementById('appScreen').style.display = 'flex';
+
+  const docBadge = document.getElementById('docBadge');
+  if (docSummary) {
+    docBadge.textContent = '資料：' + pdfFileName;
+    docBadge.className = 'badge badge-doc';
+    addSystemBubble(`「${pdfFileName}」を読み込みました。チーム全員が内容を把握しています。`);
+    addBubble('nakamura', '上西さん、資料を確認しました。財務状況や顧客の状況を踏まえて議論できます。今日はどんなことを話し合いたいですか？');
+  } else {
+    docBadge.className = 'badge badge-nodoc';
+    addBubble('nakamura', '上西さん、今日はどんなことを話し合いたいですか？チーム全員、準備できています。');
+  }
+  setStatus('待機中');
+}
+
+function setStatus(text) { document.getElementById('statusBar').textContent = text; }
+
+function addSystemBubble(text) {
+  const chatArea = document.getElementById('chatArea');
+  const div = document.createElement('div');
+  div.className = 'msg';
+  div.innerHTML = `
+    <div class="avatar av-system">📄</div>
+    <div class="bubble-wrap">
+      <div class="name-tag">システム</div>
+      <div class="bubble bubble-system">${text}</div>
+    </div>`;
+  chatArea.appendChild(div);
+  chatArea.scrollTop = chatArea.scrollHeight;
+}
+
+function addBubble(memberId, text, searchQuery) {
+  const m = members.find(x => x.id === memberId);
+  const chatArea = document.getElementById('chatArea');
+  const div = document.createElement('div');
+  div.className = 'msg';
+  let searchHtml = '';
+  if (searchQuery) {
+    searchHtml = `<div class="search-indicator">🔍 検索：<em>${searchQuery}</em></div>`;
+  }
+  div.innerHTML = `
+    <div class="avatar av-${memberId}">${m.initial}</div>
+    <div class="bubble-wrap">
+      <div class="name-tag">${m.name}</div>
+      ${searchHtml}
+      <div class="bubble bubble-${memberId}">${text.replace(/\n/g,'<br>')}</div>
+    </div>`;
+  chatArea.appendChild(div);
+  chatArea.scrollTop = chatArea.scrollHeight;
+}
+
+function addUserBubble(text) {
+  const chatArea = document.getElementById('chatArea');
+  const div = document.createElement('div');
+  div.className = 'msg user';
+  div.innerHTML = `
+    <div class="avatar av-user">上西</div>
+    <div class="bubble-wrap">
+      <div class="name-tag">上西さん</div>
+      <div class="bubble bubble-user">${text.replace(/\n/g,'<br>')}</div>
+    </div>`;
+  chatArea.appendChild(div);
+  chatArea.scrollTop = chatArea.scrollHeight;
+}
+
+function showTyping(memberId, label) {
+  const m = members.find(x => x.id === memberId);
+  const chatArea = document.getElementById('chatArea');
+  const div = document.createElement('div');
+  div.className = 'msg';
+  div.id = `typing-${memberId}`;
+  div.innerHTML = `
+    <div class="avatar av-${memberId}">${m.initial}</div>
+    <div class="bubble-wrap">
+      <div class="name-tag">${m.name}${label ? ' — ' + label : ''}</div>
+      <div class="typing-bubble"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+    </div>`;
+  chatArea.appendChild(div);
+  chatArea.scrollTop = chatArea.scrollHeight;
+}
+
+function removeTyping(memberId) {
+  const el = document.getElementById(`typing-${memberId}`);
+  if (el) el.remove();
+}
+
+function addDivider(round) {
+  const chatArea = document.getElementById('chatArea');
+  const div = document.createElement('div');
+  div.className = 'round-divider';
+  div.innerHTML = `<span>第${round}回の議論</span>`;
+  chatArea.appendChild(div);
+}
+
+async function callClaudeWithSearch(systemPrompt, messages) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': API_KEY,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 600,
+      system: systemPrompt,
+      tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 1 }],
+      messages
+    })
+  });
+
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error?.message || 'APIエラー');
+  }
+
+  const data = await res.json();
+  let searchQuery = null;
+  let replyText = '';
+
+  for (const b of data.content) {
+    if (b.type === 'tool_use' && b.name === 'web_search') searchQuery = b.input?.query || null;
+    if (b.type === 'text') replyText += b.text;
+  }
+
+  if (data.stop_reason === 'tool_use') {
+    const toolBlock = data.content.find(b => b.type === 'tool_use');
+    const res2 = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': API_KEY,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 500,
+        system: systemPrompt,
+        tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 1 }],
+        messages: [
+          ...messages,
+          { role: 'assistant', content: data.content },
+          { role: 'user', content: [{ type: 'tool_result', tool_use_id: toolBlock.id, content: '検索完了。結果を踏まえて150〜250文字で発言してください。' }] }
+        ]
+      })
+    });
+    if (res2.ok) {
+      const d2 = await res2.json();
+      replyText = d2.content.filter(b => b.type === 'text').map(b => b.text).join('');
+    }
+  }
+
+  return { text: replyText, searchQuery };
+}
+
+async function sendMessage() {
+  if (processing) return;
+  const input = document.getElementById('userInput');
+  const text = input.value.trim();
+  if (!text) return;
+
+  processing = true;
+  document.getElementById('sendBtn').disabled = true;
+  input.value = '';
+
+  addUserBubble(text);
+  roundCount++;
+  addDivider(roundCount);
+  history.push({ role: 'user', content: text });
+
+  const roundReplies = [];
+
+  for (const m of members) {
+    setStatus(`${m.name} が考えています...`);
+    showTyping(m.id, '考え中...');
+
+    const prevDiscussion = roundReplies.length > 0
+      ? '\n\n【今回のここまでの議論】\n' + roundReplies.map(r => `${r.name}：${r.text}`).join('\n')
+      : '';
+
+    const histText = history.slice(0, -1).map(h =>
+      h.role === 'user' ? `上西さん：${h.content}` : h.content
+    ).join('\n\n');
+
+    const docNote = docSummary
+      ? `\n\n【社内資料の要約（チーム共有）】\n${docSummary}`
+      : '';
+
+    const system = `${m.persona}\n\n${companyCtx}${docNote}\n\n【ルール】
+・自分のキャラクターと役割に忠実に、明確な個性を出して発言すること
+・前のメンバーの発言があれば、受けて反応・議論すること（同意・反論・補足いずれも可）
+・返答は150〜250文字程度で簡潔に
+・名前は名乗らない（別途表示されるため）
+・上西さんを評価・批判しない。伴走者として支える姿勢で
+・社内資料がある場合は具体的な数字や顧客名を積極的に引用する
+・Web検索は本当に必要な場合だけ使う`;
+
+    const msgs = [];
+    if (histText) {
+      msgs.push({ role: 'user', content: `【過去の会話履歴】\n${histText}` });
+      msgs.push({ role: 'assistant', content: 'わかりました。' });
+    }
+    msgs.push({ role: 'user', content: `上西さんの問い：「${text}」${prevDiscussion}\n\n${m.name}として発言してください。` });
+
+    try {
+      removeTyping(m.id);
+      showTyping(m.id, '考え中...');
+      const { text: reply, searchQuery } = await callClaudeWithSearch(system, msgs);
+      removeTyping(m.id);
+      if (searchQuery) setStatus(`${m.name} が「${searchQuery}」を検索しました`);
+      addBubble(m.id, reply, searchQuery);
+      roundReplies.push({ name: m.name, text: reply });
+      // メンバー間に1.5秒の間隔を入れてレート制限を回避
+      await new Promise(r => setTimeout(r, 1500));
+    } catch (e) {
+      removeTyping(m.id);
+      const chatArea = document.getElementById('chatArea');
+      const errDiv = document.createElement('div');
+      errDiv.className = 'error-msg';
+      errDiv.textContent = `エラー（${m.name}）：${e.message}`;
+      chatArea.appendChild(errDiv);
+      await new Promise(r => setTimeout(r, 2000));
+    }
+  }
+
+  history.push({ role: 'assistant', content: roundReplies.map(r => `${r.name}：${r.text}`).join('\n') });
+  setStatus(`第${roundCount}回の議論完了`);
+  processing = false;
+  document.getElementById('sendBtn').disabled = false;
+  input.focus();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('userInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) sendMessage();
+  });
+});
+</script>
+</body>
+</html>
